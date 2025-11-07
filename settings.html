@@ -1,4 +1,27 @@
 <!doctype html>
+<h2 class="text-xl font-semibold mb-2">Jeux disponibles</h2>
+<p class="text-sm mb-3">Provenant de <code>games.json</code>. Coche ceux que tu veux inclure dans le tirage aléatoire.</p>
+<div id="gamesList" class="space-y-3"></div>
+</section>
+</main>
+
+
+<script>
+const $ = (id) => document.getElementById(id)
+const fileInput = $('fileInput'); const addFile = $('addFile')
+const fileChips = $('fileChips'); const loadFiles = $('loadFiles'); const clearFiles = $('clearFiles')
+const metaCount = $('metaCount'); const metaFiles = $('metaFiles'); const errors = $('errors')
+const gamesList = $('gamesList')
+const STATE = { files: JSON.parse(localStorage.getItem('avril_files')||'[]'), words: [] }
+
+
+function persistFiles(){ localStorage.setItem('avril_files', JSON.stringify(STATE.files)) }
+function renderFiles(){
+fileChips.innerHTML = ''
+STATE.files.forEach((name, i) => {
+const span = document.createElement('span'); span.className='tag'
+span.innerHTML = `<span class="mono">${name}</span> <button data-i="${i}" title="Retirer">✕</button>`
+fileChips.appendChild(span)
 })
 fileChips.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{STATE.files.splice(parseInt(b.dataset.i,10),1);persistFiles();renderFiles()}))
 metaFiles.classList.toggle('hidden', STATE.files.length===0)
