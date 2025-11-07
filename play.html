@@ -12,6 +12,7 @@
       .btn { padding:.5rem 1rem; border-radius: 1rem; border:1px solid #0001; background:#fff; box-shadow: 0 1px 2px #0001; }
       .btn-primary { background:#4f46e5; color:#fff; border-color: transparent; }
       .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace }
+      .hidden { display:none }
     </style>
   </head>
   <body class="min-h-screen bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50 text-slate-800">
@@ -73,16 +74,18 @@
     <script>
       document.addEventListener('DOMContentLoaded', () => {
         const $=id=>document.getElementById(id)
-        // Récupération des éléments (avec vérifs)
+
+        // Éléments
         const gameName=$('gameName'), gameDesc=$('gameDesc'), gameMeta=$('gameMeta'), btnRandomGame=$('btnRandomGame')
         const panelWord=$('panelWord'), btnWord=$('btnWord'), btnCopyWord=$('btnCopyWord'), wordBox=$('wordBox'), wordInfo=$('wordInfo'), wordErrors=$('wordErrors')
         const panelNumber=$('panelNumber'), minInput=$('minInput'), maxInput=$('maxInput'), btnNumber=$('btnNumber'), numberBox=$('numberBox'), btnCopyNumber=$('btnCopyNumber'), numErrors=$('numErrors')
 
-        // Auto-diagnostic pour éviter les NPE
-        const required = { btnRandomGame, panelWord, btnWord, btnCopyWord, wordBox, panelNumber, minInput, maxInput, btnNumber, numberBox }
+        // Sanity check
+        const required = { btnRandomGame, panelWord, btnWord, btnCopyWord, wordBox, panelNumber, minInput, maxInput, btnNumber, numberBox, btnCopyNumber }
         const missing = Object.entries(required).filter(([k,v])=>!v).map(([k])=>k)
         if (missing.length) console.error('[play] éléments introuvables:', missing)
 
+        // État
         const SELECTED_FILES = JSON.parse(localStorage.getItem('avril_files')||'[]')
         const SELECTED_GAMES = new Set(JSON.parse(localStorage.getItem('avril_games')||'[]'))
         let WORDS=[]; let GAMES=[]; let CURRENT=null
@@ -91,7 +94,11 @@
 
         async function loadWords(){
           WORDS=[]; if(wordErrors) wordErrors.textContent=''
-          if(!SELECTED_FILES.length){ if(wordErrors) wordErrors.textContent='Aucun fichier sélectionné (voir Paramètres).'; if(btnWord) btnWord.disabled=true; return }
+          if(!SELECTED_FILES.length){
+            if(wordErrors) wordErrors.textContent='Aucun fichier sélectionné (voir Paramètres).'
+            if(btnWord) btnWord.disabled=true
+            return
+          }
           const all=[]; const errs=[]
           for(const name of SELECTED_FILES){
             try{
@@ -113,6 +120,7 @@
             const json=await res.json()
             if(!Array.isArray(json)) throw new Error('games.json doit être un tableau JSON')
             GAMES=json
+            console.info('[play] games chargés:', GAMES.map(g=>g.id))
           }catch(e){
             if (gameDesc) gameDesc.textContent='Erreur de chargement des jeux'
             if (gameMeta) gameMeta.textContent=String(e.message||e)
@@ -121,10 +129,13 @@
         }
 
         function showPanel(kind,game){
-          panelWord?.classList.add('hidden'); panelNumber?.classList.add('hidden')
-          if(kind==='word'){ panelWord?.classList.remove('hidden'); if(btnWord) btnWord.disabled = WORDS.length===0 }
-          else if(kind==='number'){
-            panelNumber?.classList.remove('hidden')
+          if(panelWord) panelWord.classList.add('hidden')
+          if(panelNumber) panelNumber.classList.add('hidden')
+          if(kind==='word'){
+            if(panelWord) panelWord.classList.remove('hidden')
+            if(btnWord) btnWord.disabled = WORDS.length===0
+          } else if(kind==='number'){
+            if(panelNumber) panelNumber.classList.remove('hidden')
             const dmin = Number.isFinite(game?.defaultMin)? game.defaultMin : 1
             const dmax = Number.isFinite(game?.defaultMax)? game.defaultMax : 100
             if(minInput) minInput.value=dmin
@@ -136,7 +147,14 @@
 
         async function pickGame(){
           const enabled = GAMES.filter(g=>SELECTED_GAMES.has(g.id))
-          if(!enabled.length){ if(gameName) gameName.textContent='—'; if(gameDesc) gameDesc.textContent='Aucun jeu sélectionné. Va sur Paramètres.'; if(gameMeta) gameMeta.textContent=''; return }
+          console.info('[play] jeux sélectionnés (localStorage):', Array.from(SELECTED_GAMES))
+          console.info('[play] jeux éligibles (matching json):', enabled.map(g=>g.id))
+          if(!enabled.length){
+            if(gameName) gameName.textContent='—'
+            if(gameDesc) gameDesc.textContent='Aucun jeu sélectionné. Va sur Paramètres.'
+            if(gameMeta) gameMeta.textContent=''
+            return
+          }
           CURRENT = pickRandom(enabled)
           if(gameName) gameName.textContent = CURRENT.name
           if(gameDesc) gameDesc.textContent = CURRENT.description
@@ -149,31 +167,32 @@
           }
         }
 
-        // Listeners protégés
-        btnRandomGame?.addEventListener('click', pickGame)
+        // Listeners protégés (pas de ?.() pour éviter tout transpile bizarre)
+        if (btnRandomGame) btnRandomGame.addEventListener('click', pickGame)
 
-        btnWord?.addEventListener('click',()=>{
+        if (btnWord) btnWord.addEventListener('click',()=>{
           if(!WORDS.length || !wordBox || !btnCopyWord) return
           wordBox.textContent = pickRandom(WORDS)
           btnCopyWord.disabled=false
         })
-        btnCopyWord?.addEventListener('click',()=>{
+        if (btnCopyWord) btnCopyWord.addEventListener('click',()=>{
           if(!wordBox) return
           navigator.clipboard.writeText(wordBox.textContent).then(()=>{
             btnCopyWord.textContent='Copié !'; setTimeout(()=>btnCopyWord.textContent='Copier',1000)
           })
         })
 
-        btnNumber?.addEventListener('click',()=>{
+        if (btnNumber) btnNumber.addEventListener('click',()=>{
           if(numErrors) numErrors.textContent=''
-          const min=parseInt(minInput?.value,10), max=parseInt(maxInput?.value,10)
+          const min=parseInt(minInput && minInput.value,10)
+          const max=parseInt(maxInput && maxInput.value,10)
           if(Number.isNaN(min)||Number.isNaN(max)){ if(numErrors) numErrors.textContent='Valeurs invalides.'; return }
           if(min>max){ if(numErrors) numErrors.textContent='Min doit être ≤ Max.'; return }
           const n = min + Math.floor(Math.random()*(max-min+1))
           if(numberBox) numberBox.textContent = String(n)
           if(btnCopyNumber) btnCopyNumber.disabled=false
         })
-        btnCopyNumber?.addEventListener('click',()=>{
+        if (btnCopyNumber) btnCopyNumber.addEventListener('click',()=>{
           if(!numberBox) return
           navigator.clipboard.writeText(numberBox.textContent).then(()=>{
             btnCopyNumber.textContent='Copié !'; setTimeout(()=>btnCopyNumber.textContent='Copier',1000)
@@ -181,7 +200,7 @@
         })
 
         // Boot
-        (async ()=>{
+        ;(async ()=>{
           await loadGames()
           if(SELECTED_GAMES.size) pickGame()
         })()
