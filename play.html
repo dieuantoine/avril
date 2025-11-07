@@ -1,91 +1,193 @@
 <!doctype html>
-</main>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Avril — Proposer un jeu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root { --blur: 10px }
+      .glass { backdrop-filter: blur(var(--blur)); -webkit-backdrop-filter: blur(var(--blur)); background: rgba(255,255,255,0.6) }
+      code { background: #0002; padding: 0 .3rem; border-radius: .3rem; }
+      .btn { padding:.5rem 1rem; border-radius: 1rem; border:1px solid #0001; background:#fff; box-shadow: 0 1px 2px #0001; }
+      .btn-primary { background:#4f46e5; color:#fff; border-color: transparent; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace }
+    </style>
+  </head>
+  <body class="min-h-screen bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50 text-slate-800">
+    <main class="mx-auto max-w-3xl p-6">
+      <header class="flex items-center justify-between mb-6">
+        <h1 class="text-3xl font-extrabold">Proposer un jeu</h1>
+        <nav class="text-sm flex gap-3">
+          <a href="./index.html" class="underline">Accueil</a>
+          <a href="./settings.html" class="underline">Paramètres</a>
+        </nav>
+      </header>
 
+      <section class="glass rounded-3xl p-6 shadow mb-6">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <div class="text-sm text-slate-600">Jeu sélectionné</div>
+            <h2 id="gameName" class="text-2xl font-bold">—</h2>
+            <p id="gameDesc" class="text-sm text-slate-700">Sélectionne des jeux dans Paramètres puis reviens ici.</p>
+            <div id="gameMeta" class="text-xs text-slate-500 mt-1"></div>
+          </div>
+          <div class="flex gap-2">
+            <button id="btnRandomGame" class="btn">Tirer un jeu</button>
+          </div>
+        </div>
+      </section>
 
-<script>
-const $=id=>document.getElementById(id)
-const gameName=$('gameName'), gameDesc=$('gameDesc'), gameMeta=$('gameMeta'), btnRandomGame=$('btnRandomGame')
-const panelWord=$('panelWord'), btnWord=$('btnWord'), btnCopyWord=$('btnCopyWord'), wordBox=$('wordBox'), wordInfo=$('wordInfo'), wordErrors=$('wordErrors')
-const panelNumber=$('panelNumber'), minInput=$('minInput'), maxInput=$('maxInput'), btnNumber=$('btnNumber'), numberBox=$('numberBox'), btnCopyNumber=$('btnCopyNumber'), numErrors=$('numErrors')
+      <!-- Générateur: MOT -->
+      <section id="panelWord" class="glass rounded-3xl p-6 shadow mb-6 hidden">
+        <h3 class="text-xl font-semibold mb-2">Générateur de mots</h3>
+        <div class="flex gap-2">
+          <button id="btnWord" class="btn btn-primary" disabled>Proposer un mot</button>
+          <button id="btnCopyWord" class="btn" disabled>Copier</button>
+        </div>
+        <div class="mt-4 p-6 rounded-2xl border bg-white/70 text-center text-3xl font-bold" id="wordBox">—</div>
+        <div class="text-sm mt-2" id="wordInfo"></div>
+        <pre id="wordErrors" class="text-sm text-red-700 whitespace-pre-wrap"></pre>
+      </section>
 
+      <!-- Générateur: NOMBRE -->
+      <section id="panelNumber" class="glass rounded-3xl p-6 shadow hidden">
+        <h3 class="text-xl font-semibold mb-2">Générateur de nombres</h3>
+        <div class="grid gap-3 md:grid-cols-3 items-end">
+          <div>
+            <label class="block text-sm font-medium">Min (inclus)</label>
+            <input id="minInput" type="number" value="1" class="w-full rounded-xl border border-gray-300 px-3 py-2" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Max (inclus)</label>
+            <input id="maxInput" type="number" value="100" class="w-full rounded-xl border border-gray-300 px-3 py-2" />
+          </div>
+          <button id="btnNumber" class="btn btn-primary w-full">Générer</button>
+        </div>
+        <div class="mt-4 p-6 rounded-2xl border bg-white/70 text-center text-3xl font-bold" id="numberBox">—</div>
+        <div class="mt-2"><button id="btnCopyNumber" class="btn" disabled>Copier</button></div>
+        <pre id="numErrors" class="text-sm text-red-700 whitespace-pre-wrap"></pre>
+      </section>
+    </main>
 
-const SELECTED_FILES = JSON.parse(localStorage.getItem('avril_files')||'[]')
-const SELECTED_GAMES = new Set(JSON.parse(localStorage.getItem('avril_games')||'[]'))
-let WORDS=[]; let GAMES=[]; let CURRENT=null
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const $=id=>document.getElementById(id)
+        // Récupération des éléments (avec vérifs)
+        const gameName=$('gameName'), gameDesc=$('gameDesc'), gameMeta=$('gameMeta'), btnRandomGame=$('btnRandomGame')
+        const panelWord=$('panelWord'), btnWord=$('btnWord'), btnCopyWord=$('btnCopyWord'), wordBox=$('wordBox'), wordInfo=$('wordInfo'), wordErrors=$('wordErrors')
+        const panelNumber=$('panelNumber'), minInput=$('minInput'), maxInput=$('maxInput'), btnNumber=$('btnNumber'), numberBox=$('numberBox'), btnCopyNumber=$('btnCopyNumber'), numErrors=$('numErrors')
 
+        // Auto-diagnostic pour éviter les NPE
+        const required = { btnRandomGame, panelWord, btnWord, btnCopyWord, wordBox, panelNumber, minInput, maxInput, btnNumber, numberBox }
+        const missing = Object.entries(required).filter(([k,v])=>!v).map(([k])=>k)
+        if (missing.length) console.error('[play] éléments introuvables:', missing)
 
-function parseWordFile(text){ return text.split(/\r?\n|\r/g).map(l=>l.trim()).filter(l=>l && !l.startsWith('#')) }
-async function loadWords(){
-WORDS=[]; wordErrors.textContent=''
-if(!SELECTED_FILES.length){ wordErrors.textContent='Aucun fichier sélectionné (voir Paramètres).'; btnWord.disabled=true; return }
-const all=[]; const errs=[]
-for(const name of SELECTED_FILES){
-try{ const res=await fetch('./'+name+'?v='+Date.now(),{cache:'no-store'}); if(!res.ok) throw new Error(res.status); const txt=await res.text(); all.push(...parseWordFile(txt)) }catch(e){ errs.push(`• ${name} — ${e.message}`) }
-}
-WORDS=Array.from(new Set(all)); // dédup
-btnWord.disabled = WORDS.length===0
-wordInfo.textContent = WORDS.length? `${WORDS.length} mot${WORDS.length>1?'s':''} chargés` : ''
-wordErrors.textContent = errs.join('\n')
-}
+        const SELECTED_FILES = JSON.parse(localStorage.getItem('avril_files')||'[]')
+        const SELECTED_GAMES = new Set(JSON.parse(localStorage.getItem('avril_games')||'[]'))
+        let WORDS=[]; let GAMES=[]; let CURRENT=null
 
+        function parseWordFile(text){ return text.split(/\r?\n|\r/g).map(l=>l.trim()).filter(l=>l && !l.startsWith('#')) }
 
-async function loadGames(){ const res=await fetch('./games.json?v='+Date.now()); GAMES=await res.json() }
+        async function loadWords(){
+          WORDS=[]; if(wordErrors) wordErrors.textContent=''
+          if(!SELECTED_FILES.length){ if(wordErrors) wordErrors.textContent='Aucun fichier sélectionné (voir Paramètres).'; if(btnWord) btnWord.disabled=true; return }
+          const all=[]; const errs=[]
+          for(const name of SELECTED_FILES){
+            try{
+              const res=await fetch('./'+name+'?v='+Date.now(),{cache:'no-store'})
+              if(!res.ok) throw new Error(res.status)
+              const txt=await res.text(); all.push(...parseWordFile(txt))
+            }catch(e){ errs.push(`• ${name} — ${e.message}`) }
+          }
+          WORDS=Array.from(new Set(all))
+          if(btnWord) btnWord.disabled = WORDS.length===0
+          if(wordInfo) wordInfo.textContent = WORDS.length? `${WORDS.length} mot${WORDS.length>1?'s':''} chargés` : ''
+          if(wordErrors) wordErrors.textContent = errs.join('\n')
+        }
 
+        async function loadGames(){
+          try{
+            const res=await fetch('./games.json?v='+Date.now(),{cache:'no-store'})
+            if(!res.ok) throw new Error('games.json introuvable ('+res.status+').')
+            const json=await res.json()
+            if(!Array.isArray(json)) throw new Error('games.json doit être un tableau JSON')
+            GAMES=json
+          }catch(e){
+            if (gameDesc) gameDesc.textContent='Erreur de chargement des jeux'
+            if (gameMeta) gameMeta.textContent=String(e.message||e)
+            console.error('[play] loadGames error', e)
+          }
+        }
 
-function showPanel(kind,game){
-panelWord.classList.add('hidden'); panelNumber.classList.add('hidden')
-if(kind==='word'){ panelWord.classList.remove('hidden'); btnWord.disabled = WORDS.length===0 }
-else if(kind==='number'){
-panelNumber.classList.remove('hidden');
-const dmin = Number.isFinite(game?.defaultMin)? game.defaultMin : 1
-const dmax = Number.isFinite(game?.defaultMax)? game.defaultMax : 100
-minInput.value=dmin; maxInput.value=dmax
-}
-}
+        function showPanel(kind,game){
+          panelWord?.classList.add('hidden'); panelNumber?.classList.add('hidden')
+          if(kind==='word'){ panelWord?.classList.remove('hidden'); if(btnWord) btnWord.disabled = WORDS.length===0 }
+          else if(kind==='number'){
+            panelNumber?.classList.remove('hidden')
+            const dmin = Number.isFinite(game?.defaultMin)? game.defaultMin : 1
+            const dmax = Number.isFinite(game?.defaultMax)? game.defaultMax : 100
+            if(minInput) minInput.value=dmin
+            if(maxInput) maxInput.value=dmax
+          }
+        }
 
+        function pickRandom(arr){ return arr[Math.floor(Math.random()*arr.length)] }
 
-function pickRandom(arr){ return arr[Math.floor(Math.random()*arr.length)] }
+        async function pickGame(){
+          const enabled = GAMES.filter(g=>SELECTED_GAMES.has(g.id))
+          if(!enabled.length){ if(gameName) gameName.textContent='—'; if(gameDesc) gameDesc.textContent='Aucun jeu sélectionné. Va sur Paramètres.'; if(gameMeta) gameMeta.textContent=''; return }
+          CURRENT = pickRandom(enabled)
+          if(gameName) gameName.textContent = CURRENT.name
+          if(gameDesc) gameDesc.textContent = CURRENT.description
+          if(gameMeta) gameMeta.textContent = `Besoin: ${CURRENT.needs}`
+          if(CURRENT.needs==='word'){ await loadWords(); showPanel('word', CURRENT) }
+          else if(CURRENT.needs==='number'){ showPanel('number', CURRENT) }
+          else { // either
+            await loadWords(); showPanel(WORDS.length? 'word':'number', CURRENT)
+            if (gameMeta) gameMeta.textContent += ' (au choix)'
+          }
+        }
 
+        // Listeners protégés
+        btnRandomGame?.addEventListener('click', pickGame)
 
-async function pickGame(){
-const enabled = GAMES.filter(g=>SELECTED_GAMES.has(g.id))
-if(!enabled.length){ gameName.textContent='—'; gameDesc.textContent='Aucun jeu sélectionné. Va sur Paramètres.'; gameMeta.textContent=''; return }
-CURRENT = pickRandom(enabled)
-gameName.textContent = CURRENT.name
-gameDesc.textContent = CURRENT.description
-gameMeta.textContent = `Besoin: ${CURRENT.needs}`
-if(CURRENT.needs==='word'){ await loadWords(); showPanel('word', CURRENT) }
-else if(CURRENT.needs==='number'){ showPanel('number', CURRENT) }
-else { // either
-await loadWords(); showPanel(WORDS.length? 'word':'number', CURRENT)
-gameMeta.textContent += ' (au choix)'
-}
-}
+        btnWord?.addEventListener('click',()=>{
+          if(!WORDS.length || !wordBox || !btnCopyWord) return
+          wordBox.textContent = pickRandom(WORDS)
+          btnCopyWord.disabled=false
+        })
+        btnCopyWord?.addEventListener('click',()=>{
+          if(!wordBox) return
+          navigator.clipboard.writeText(wordBox.textContent).then(()=>{
+            btnCopyWord.textContent='Copié !'; setTimeout(()=>btnCopyWord.textContent='Copier',1000)
+          })
+        })
 
+        btnNumber?.addEventListener('click',()=>{
+          if(numErrors) numErrors.textContent=''
+          const min=parseInt(minInput?.value,10), max=parseInt(maxInput?.value,10)
+          if(Number.isNaN(min)||Number.isNaN(max)){ if(numErrors) numErrors.textContent='Valeurs invalides.'; return }
+          if(min>max){ if(numErrors) numErrors.textContent='Min doit être ≤ Max.'; return }
+          const n = min + Math.floor(Math.random()*(max-min+1))
+          if(numberBox) numberBox.textContent = String(n)
+          if(btnCopyNumber) btnCopyNumber.disabled=false
+        })
+        btnCopyNumber?.addEventListener('click',()=>{
+          if(!numberBox) return
+          navigator.clipboard.writeText(numberBox.textContent).then(()=>{
+            btnCopyNumber.textContent='Copié !'; setTimeout(()=>btnCopyNumber.textContent='Copier',1000)
+          })
+        })
 
-btnRandomGame.addEventListener('click', pickGame)
+        // Boot
+        (async ()=>{
+          await loadGames()
+          if(SELECTED_GAMES.size) pickGame()
+        })()
 
-
-btnWord.addEventListener('click',()=>{ if(!WORDS.length) return; wordBox.textContent = pickRandom(WORDS); btnCopyWord.disabled=false })
-btnCopyWord.addEventListener('click',()=>{ navigator.clipboard.writeText(wordBox.textContent).then(()=>{btnCopyWord.textContent='Copié !'; setTimeout(()=>btnCopyWord.textContent='Copier',1000)}) })
-
-
-btnNumber.addEventListener('click',()=>{
-numErrors.textContent=''
-const min=parseInt(minInput.value,10), max=parseInt(maxInput.value,10)
-if(Number.isNaN(min)||Number.isNaN(max)){ numErrors.textContent='Valeurs invalides.'; return }
-if(min>max){ numErrors.textContent='Min doit être ≤ Max.'; return }
-const n = min + Math.floor(Math.random()*(max-min+1))
-numberBox.textContent = String(n); btnCopyNumber.disabled=false
-})
-btnCopyNumber.addEventListener('click',()=>{ navigator.clipboard.writeText(numberBox.textContent).then(()=>{btnCopyNumber.textContent='Copié !'; setTimeout(()=>btnCopyNumber.textContent='Copier',1000)}) })
-
-
-document.addEventListener('DOMContentLoaded', async ()=>{
-await loadGames()
-// Tirage auto si des jeux sont cochés
-if(SELECTED_GAMES.size) pickGame()
-})
-</script>
-</body>
+        console.info('[play] UI ok:', !!btnRandomGame && !!panelWord && !!panelNumber)
+      })
+    </script>
+  </body>
 </html>
