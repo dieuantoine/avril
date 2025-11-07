@@ -1,0 +1,91 @@
+<!doctype html>
+</main>
+
+
+<script>
+const $=id=>document.getElementById(id)
+const gameName=$('gameName'), gameDesc=$('gameDesc'), gameMeta=$('gameMeta'), btnRandomGame=$('btnRandomGame')
+const panelWord=$('panelWord'), btnWord=$('btnWord'), btnCopyWord=$('btnCopyWord'), wordBox=$('wordBox'), wordInfo=$('wordInfo'), wordErrors=$('wordErrors')
+const panelNumber=$('panelNumber'), minInput=$('minInput'), maxInput=$('maxInput'), btnNumber=$('btnNumber'), numberBox=$('numberBox'), btnCopyNumber=$('btnCopyNumber'), numErrors=$('numErrors')
+
+
+const SELECTED_FILES = JSON.parse(localStorage.getItem('avril_files')||'[]')
+const SELECTED_GAMES = new Set(JSON.parse(localStorage.getItem('avril_games')||'[]'))
+let WORDS=[]; let GAMES=[]; let CURRENT=null
+
+
+function parseWordFile(text){ return text.split(/\r?\n|\r/g).map(l=>l.trim()).filter(l=>l && !l.startsWith('#')) }
+async function loadWords(){
+WORDS=[]; wordErrors.textContent=''
+if(!SELECTED_FILES.length){ wordErrors.textContent='Aucun fichier sélectionné (voir Paramètres).'; btnWord.disabled=true; return }
+const all=[]; const errs=[]
+for(const name of SELECTED_FILES){
+try{ const res=await fetch('./'+name+'?v='+Date.now(),{cache:'no-store'}); if(!res.ok) throw new Error(res.status); const txt=await res.text(); all.push(...parseWordFile(txt)) }catch(e){ errs.push(`• ${name} — ${e.message}`) }
+}
+WORDS=Array.from(new Set(all)); // dédup
+btnWord.disabled = WORDS.length===0
+wordInfo.textContent = WORDS.length? `${WORDS.length} mot${WORDS.length>1?'s':''} chargés` : ''
+wordErrors.textContent = errs.join('\n')
+}
+
+
+async function loadGames(){ const res=await fetch('./games.json?v='+Date.now()); GAMES=await res.json() }
+
+
+function showPanel(kind,game){
+panelWord.classList.add('hidden'); panelNumber.classList.add('hidden')
+if(kind==='word'){ panelWord.classList.remove('hidden'); btnWord.disabled = WORDS.length===0 }
+else if(kind==='number'){
+panelNumber.classList.remove('hidden');
+const dmin = Number.isFinite(game?.defaultMin)? game.defaultMin : 1
+const dmax = Number.isFinite(game?.defaultMax)? game.defaultMax : 100
+minInput.value=dmin; maxInput.value=dmax
+}
+}
+
+
+function pickRandom(arr){ return arr[Math.floor(Math.random()*arr.length)] }
+
+
+async function pickGame(){
+const enabled = GAMES.filter(g=>SELECTED_GAMES.has(g.id))
+if(!enabled.length){ gameName.textContent='—'; gameDesc.textContent='Aucun jeu sélectionné. Va sur Paramètres.'; gameMeta.textContent=''; return }
+CURRENT = pickRandom(enabled)
+gameName.textContent = CURRENT.name
+gameDesc.textContent = CURRENT.description
+gameMeta.textContent = `Besoin: ${CURRENT.needs}`
+if(CURRENT.needs==='word'){ await loadWords(); showPanel('word', CURRENT) }
+else if(CURRENT.needs==='number'){ showPanel('number', CURRENT) }
+else { // either
+await loadWords(); showPanel(WORDS.length? 'word':'number', CURRENT)
+gameMeta.textContent += ' (au choix)'
+}
+}
+
+
+btnRandomGame.addEventListener('click', pickGame)
+
+
+btnWord.addEventListener('click',()=>{ if(!WORDS.length) return; wordBox.textContent = pickRandom(WORDS); btnCopyWord.disabled=false })
+btnCopyWord.addEventListener('click',()=>{ navigator.clipboard.writeText(wordBox.textContent).then(()=>{btnCopyWord.textContent='Copié !'; setTimeout(()=>btnCopyWord.textContent='Copier',1000)}) })
+
+
+btnNumber.addEventListener('click',()=>{
+numErrors.textContent=''
+const min=parseInt(minInput.value,10), max=parseInt(maxInput.value,10)
+if(Number.isNaN(min)||Number.isNaN(max)){ numErrors.textContent='Valeurs invalides.'; return }
+if(min>max){ numErrors.textContent='Min doit être ≤ Max.'; return }
+const n = min + Math.floor(Math.random()*(max-min+1))
+numberBox.textContent = String(n); btnCopyNumber.disabled=false
+})
+btnCopyNumber.addEventListener('click',()=>{ navigator.clipboard.writeText(numberBox.textContent).then(()=>{btnCopyNumber.textContent='Copié !'; setTimeout(()=>btnCopyNumber.textContent='Copier',1000)}) })
+
+
+document.addEventListener('DOMContentLoaded', async ()=>{
+await loadGames()
+// Tirage auto si des jeux sont cochés
+if(SELECTED_GAMES.size) pickGame()
+})
+</script>
+</body>
+</html>
