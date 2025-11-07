@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="fr" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Avril — jouer entre amis</title>
+    <meta name="description" content="Avril — mini‑jeux légers pour jouer entre amis, hébergés sur GitHub Pages." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E" />
+    <!-- Tailwind via CDN for quick prototyping (fine for GitHub Pages) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* petite touche perso */
+      :root { --blur: 12px }
+      .glass { backdrop-filter: blur(var(--blur)); -webkit-backdrop-filter: blur(var(--blur)); background: rgba(255,255,255,0.65) }
+      .dark .glass { background: rgba(17,24,39,0.6) }
+      .btn { @apply px-4 py-2 rounded-2xl shadow hover:shadow-md transition font-medium; }
+      .btn-primary { @apply bg-indigo-600 text-white hover:bg-indigo-700; }
+      .btn-secondary { @apply bg-white text-gray-900 hover:bg-gray-100 border border-gray-200; }
+      .tag { @apply inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-800; }
+    </style>
+  </head>
+  <body class="min-h-full bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 text-slate-800 dark:text-slate-100">
+    <main id="app" class="mx-auto max-w-3xl p-6">
+      <header class="flex items-center justify-between mb-6">
+        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight">Avril <span class="text-indigo-600">·</span> <span class="text-lg font-normal">entre amis</span></h1>
+        <button id="toggleTheme" class="btn btn-secondary" title="Basculer clair/sombre">🌓</button>
+      </header>
+
+      <!-- Card: setup -->
+      <section id="setup" class="glass rounded-3xl p-5 shadow">
+        <h2 class="text-xl font-semibold mb-3">Créer une partie</h2>
+        <div class="flex flex-wrap gap-2 mb-4">
+          <span class="tag">Local · même écran</span>
+          <span class="tag">Sans compte</span>
+          <span class="tag">GitHub Pages</span>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <label class="block text-sm font-medium mb-1">Nom de la partie</label>
+            <input id="gameName" class="w-full rounded-xl border border-gray-300 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ex. Soirée du vendredi" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Mode de jeu</label>
+            <select id="mode" class="w-full rounded-xl border border-gray-300 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="quiz">Quiz rapide</option>
+              <option value="defis">Défis fun</option>
+              <option value="mix">Mix quiz + défis</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <label class="block text-sm font-medium mb-1">Joueurs</label>
+          <div id="players" class="flex flex-wrap gap-2"></div>
+          <div class="mt-2 flex gap-2">
+            <input id="newPlayer" class="flex-1 rounded-xl border border-gray-300 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ajouter un pseudo" />
+            <button id="addPlayer" class="btn btn-secondary">Ajouter</button>
+          </div>
+        </div>
+
+        <div class="mt-6 flex items-center justify-between">
+          <div class="text-sm text-gray-600 dark:text-gray-300">Code partie : <span id="roomCode" class="font-mono"></span></div>
+          <button id="start" class="btn btn-primary">Lancer la partie ▶</button>
+        </div>
+      </section>
+
+      <!-- Card: game -->
+      <section id="game" class="hidden glass rounded-3xl p-5 shadow">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 id="gameTitle" class="text-xl font-semibold">Partie</h2>
+            <p id="gameSubtitle" class="text-sm text-gray-600 dark:text-gray-300"></p>
+          </div>
+          <button id="reset" class="btn btn-secondary">⟲ Recommencer</button>
+        </div>
+
+        <div class="mt-5 grid gap-5 md:grid-cols-3">
+          <div class="md:col-span-2">
+            <div id="promptCard" class="rounded-3xl border border-gray-200 p-4 bg-white/70 dark:bg-slate-800/60">
+              <div class="text-xs uppercase tracking-wider text-gray-500">Manche</div>
+              <div id="promptText" class="mt-2 text-2xl leading-snug font-semibold"></div>
+              <div class="mt-3 flex gap-2">
+                <button id="nextPrompt" class="btn btn-primary">Nouveau prompt</button>
+                <button id="skipPrompt" class="btn btn-secondary">Passer</button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h3 class="font-semibold">Scores</h3>
+            <ul id="scoreList" class="mt-2 space-y-2"></ul>
+          </div>
+        </div>
+
+        <div id="winner" class="mt-6 hidden rounded-2xl border border-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 p-4">
+          <div class="text-sm text-emerald-700 dark:text-emerald-300">🎉 Fin de partie</div>
+          <div id="winnerText" class="text-lg font-semibold"></div>
+        </div>
+      </section>
+
+      <footer class="mt-10 text-center text-sm text-gray-500">
+        <p>Open‑source sur GitHub · Construit pour GitHub Pages · <a href="#" id="downloadState" class="underline">Exporter la partie (.json)</a></p>
+      </footer>
+    </main>
+
+    <script>
+      // --- State ---
+      const state = JSON.parse(localStorage.getItem('avril_state') || '{}')
+      const game = state.game || { id: makeCode(), name: 'Partie', mode: 'quiz', round: 0, target: 10 }
+      const players = state.players || [] // [{name, score}]
+
+      // --- Elements ---
+      const el = (id) => document.getElementById(id)
+      const setup = el('setup'), gameView = el('game')
+      const playersWrap = el('players'), newPlayer = el('newPlayer'), addPlayer = el('addPlayer')
+      const roomCode = el('roomCode'), start = el('start'), reset = el('reset')
+      const gameTitle = el('gameTitle'), gameSubtitle = el('gameSubtitle'), scoreList = el('scoreList')
+      const promptText = el('promptText'), nextPrompt = el('nextPrompt'), skipPrompt = el('skipPrompt')
+      const winner = el('winner'), winnerText = el('winnerText'), downloadState = el('downloadState')
+
+      // --- Theme toggle ---
+      el('toggleTheme').addEventListener('click', () => {
+        document.documentElement.classList.toggle('dark')
+        save()
+      })
+      if (state.dark) document.documentElement.classList.add('dark')
+
+      // --- Setup UI ---
+      el('gameName').value = game.name
+      el('mode').value = game.mode
+      roomCode.textContent = game.id
+
+      addPlayer.addEventListener('click', () => {
+        const name = newPlayer.value.trim()
+        if (!name) return
+        if (players.find(p => p.name.toLowerCase() === name.toLowerCase())) {
+          alert('Ce pseudo existe déjà'); return
+        }
+        players.push({ name, score: 0 })
+        newPlayer.value = ''
+        renderPlayers()
+        save()
+      })
+      newPlayer.addEventListener('keydown', (e) => { if (e.key === 'Enter') addPlayer.click() })
+
+      function renderPlayers() {
+        playersWrap.innerHTML = ''
+        players.forEach((p, i) => {
+          const chip = document.createElement('span')
+          chip.className = 'tag group'
+          chip.innerHTML = `${escapeHtml(p.name)} <button class="ml-2 text-gray-500 group-hover:text-red-600" title="Retirer" data-i="${i}">✕</button>`
+          playersWrap.appendChild(chip)
+        })
+        playersWrap.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+          players.splice(parseInt(btn.dataset.i, 10), 1)
+          renderPlayers(); save()
+        }))
+      }
+      renderPlayers()
+
+      // --- Start game ---
+      start.addEventListener('click', () => {
+        game.name = el('gameName').value.trim() || 'Partie'
+        game.mode = el('mode').value
+        if (players.length < 2) { alert('Ajoutez au moins 2 joueurs'); return }
+        setup.classList.add('hidden')
+        gameView.classList.remove('hidden')
+        gameTitle.textContent = `Partie : ${game.name}`
+        gameSubtitle.textContent = `${players.length} joueurs · mode ${labelMode(game.mode)} · ${game.target} points`
+        next()
+        renderScores()
+        save()
+      })
+
+      reset.addEventListener('click', () => {
+        if (!confirm('Revenir à la création de partie ?')) return
+        players.forEach(p => p.score = 0)
+        game.round = 0
+        winner.classList.add('hidden')
+        setup.classList.remove('hidden')
+        gameView.classList.add('hidden')
+        save()
+      })
+
+      // --- Prompts ---
+      const PROMPTS = {
+        quiz: [
+          { q: "Combien font 7 × 8 ?", a: "56" },
+          { q: "Capitale de l'Espagne ?", a: "Madrid" },
+          { q: "Quelle planète est la plus proche du Soleil ?", a: "Mercure" },
+          { q: "Année de sortie de Minecraft ?", a: "2011" },
+        ],
+        defis: [
+          { q: "Fais rire le groupe en 10 secondes !", a: null },
+          { q: "Mimes un animal, les autres devinent.", a: null },
+          { q: "Chante un refrain au choix.", a: null },
+          { q: "Raconte une anecdote vraie ou fausse (bluff).", a: null },
+        ],
+      }
+
+      function labelMode(m) { return m === 'quiz' ? 'Quiz' : (m === 'defis' ? 'Défis' : 'Mix') }
+
+      function next() {
+        game.round++
+        const mode = game.mode === 'mix' ? (Math.random() < 0.5 ? 'quiz' : 'defis') : game.mode
+        const pool = PROMPTS[mode]
+        const item = pool[Math.floor(Math.random()*pool.length)]
+        promptText.innerHTML = item.a ? `${escapeHtml(item.q)}<div class="mt-2 text-sm text-gray-500">Réponse attendue : <span class="font-mono">${escapeHtml(item.a)}</span></div>` : escapeHtml(item.q)
+      }
+
+      nextPrompt.addEventListener('click', next)
+      skipPrompt.addEventListener('click', next)
+
+      // --- Scores ---
+      function renderScores() {
+        scoreList.innerHTML = ''
+        players.forEach((p, i) => {
+          const li = document.createElement('li')
+          li.className = 'flex items-center justify-between rounded-2xl border border-gray-200 p-2 bg-white/70 dark:bg-slate-800/60'
+          li.innerHTML = `
+            <div>
+              <div class="font-medium">${escapeHtml(p.name)}</div>
+              <div class="text-xs text-gray-500">${p.score} point${p.score>1?'s':''}</div>
+            </div>
+            <div class="flex gap-2">
+              <button class="btn btn-secondary" data-i="${i}" data-delta="-1">−1</button>
+              <button class="btn btn-primary" data-i="${i}" data-delta="1">+1</button>
+            </div>`
+          scoreList.appendChild(li)
+        })
+        scoreList.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+          const i = parseInt(btn.dataset.i, 10)
+          const d = parseInt(btn.dataset.delta, 10)
+          players[i].score = Math.max(0, players[i].score + d)
+          if (players[i].score >= game.target) showWinner(players[i])
+          renderScores(); save()
+        }))
+      }
+
+      function showWinner(p) {
+        winner.classList.remove('hidden')
+        winnerText.textContent = `${p.name} atteint ${p.score} points !`
+      }
+
+      // --- Persistence & helpers ---
+      function save() {
+        const dark = document.documentElement.classList.contains('dark')
+        localStorage.setItem('avril_state', JSON.stringify({ game, players, dark }))
+      }
+      function makeCode() { return Math.random().toString(36).slice(2, 7).toUpperCase() }
+      function escapeHtml(s){ return s?.toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#039;'}[m])) }
+
+      downloadState.addEventListener('click', (e) => {
+        e.preventDefault()
+        const blob = new Blob([JSON.stringify({ game, players }, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url; a.download = `avril_${game.id}.json`; a.click()
+        URL.revokeObjectURL(url)
+      })
+
+      // Auto‑resume last session
+      if (players.length && (state.lastView === 'game')) {
+        setup.classList.add('hidden'); gameView.classList.remove('hidden')
+        gameTitle.textContent = `Partie : ${game.name}`
+        gameSubtitle.textContent = `${players.length} joueurs · mode ${labelMode(game.mode)} · ${game.target} points`
+        renderScores()
+      }
+      new MutationObserver(() => { state.lastView = gameView.classList.contains('hidden') ? 'setup' : 'game'; save() }).observe(gameView, { attributes: true })
+    </script>
+  </body>
+</html>
