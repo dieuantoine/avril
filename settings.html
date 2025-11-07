@@ -1,0 +1,69 @@
+<!doctype html>
+})
+fileChips.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{STATE.files.splice(parseInt(b.dataset.i,10),1);persistFiles();renderFiles()}))
+metaFiles.classList.toggle('hidden', STATE.files.length===0)
+metaFiles.textContent = STATE.files.length? STATE.files.length+` fichier${STATE.files.length>1?'s':''}`:''
+}
+
+
+addFile.addEventListener('click',()=>{
+const v=(fileInput.value||'').trim(); if(!v) return
+if(!/\.(txt)$/i.test(v)){ errors.textContent='Le nom doit finir par .txt'; return }
+errors.textContent=''
+if(!STATE.files.includes(v)) STATE.files.push(v); fileInput.value=''; persistFiles(); renderFiles()
+})
+fileInput.addEventListener('keydown',e=>{ if(e.key==='Enter') addFile.click() })
+clearFiles.addEventListener('click',()=>{ STATE.files=[]; persistFiles(); renderFiles(); metaCount.classList.add('hidden') })
+
+
+function parseWordFile(text){
+return text.split(/\r?\n|\r/g).map(l=>l.trim()).filter(l=>l && !l.startsWith('#'))
+}
+async function chargerListes(){
+errors.textContent=''; STATE.words=[]
+if(!STATE.files.length){ errors.textContent='Aucun fichier sélectionné.'; return }
+const all=[]; const errs=[]
+for(const name of STATE.files){
+try{
+const res=await fetch('./'+name+'?v='+Date.now(),{cache:'no-store'})
+if(!res.ok) throw new Error(res.status)
+const txt=await res.text(); all.push(...parseWordFile(txt))
+}catch(e){ errs.push(`• ${name} — ${e.message}`) }
+}
+const unique=Array.from(new Set(all)); STATE.words=unique
+metaCount.textContent = unique.length+` mot${unique.length>1?'s':''}`; metaCount.classList.remove('hidden')
+errors.textContent = errs.join('\n')
+}
+loadFiles.addEventListener('click', chargerListes)
+
+
+// Jeux
+function persistGames(sel){ localStorage.setItem('avril_games', JSON.stringify(sel)) }
+async function loadGames(){
+const res=await fetch('./games.json?v='+Date.now()); const games=await res.json()
+const selected = new Set(JSON.parse(localStorage.getItem('avril_games')||'[]'))
+gamesList.innerHTML=''
+games.forEach(g=>{
+const id='g_'+g.id
+const wrap=document.createElement('label'); wrap.className='block p-3 rounded-2xl border bg-white/70'
+wrap.innerHTML=`<div class="flex items-start gap-3">
+<input id="${id}" type="checkbox" class="mt-1" ${selected.has(g.id)?'checked':''}>
+<div>
+<div class="font-semibold">${g.name}</div>
+<div class="text-sm text-slate-600">${g.description}</div>
+<div class="text-xs mt-1 text-slate-500">Besoin : <code>${g.needs}</code>${g.defaultMin!=null?` · min=${g.defaultMin}`:''}${g.defaultMax!=null?` · max=${g.defaultMax}`:''}</div>
+</div>
+</div>`
+gamesList.appendChild(wrap)
+wrap.querySelector('input').addEventListener('change',()=>{
+if(wrap.querySelector('input').checked) selected.add(g.id); else selected.delete(g.id)
+persistGames(Array.from(selected))
+})
+})
+}
+
+
+document.addEventListener('DOMContentLoaded', ()=>{ if(!STATE.files.length){ STATE.files=['mots.txt']; persistFiles() } renderFiles(); loadGames() })
+</script>
+</body>
+</html>
