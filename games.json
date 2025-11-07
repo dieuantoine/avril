@@ -1,0 +1,28 @@
+[
+{
+"id": "mots_interdits",
+"name": "Mots rapides",
+"description": "Chacun pioche un mot au hasard, ensuite on lance une conversation, le but est de faire dire le mot à l’autre. Pour gagner, il faut soit deviner le mot de l'autre ou lui faire dire le sien sans qu'il ne s'en rende compte.",
+"needs": "word"
+},
+{
+"id": "mot_aleatoire",
+"name": "Mot aléatoire",
+"description": "Faire deviner un mot en le dessinant, le mimant ou le décrivant, ou pour un autre usage.",
+"needs": "word"
+},
+{
+"id": "qui_suis_je",
+"name": "Qui suis-je ?",
+"description": "Faire deviner un personnage de film en ne répondant que par oui ou par non.",
+"needs": "word"
+},
+{
+"id": "jeu_de_la_note",
+"name": "Le jeu de la note",
+"description": "Fait deviner la note en répondant aux questions.",
+"needs": "number",
+"defaultMin": 0,
+"defaultMax": 10
+}
+]
