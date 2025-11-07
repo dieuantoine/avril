@@ -52,52 +52,69 @@
     </main>
 
     <script>
+      // ——————————————————————————
+      //  Helpers & state
+      // ——————————————————————————
+      const $ = (id) => document.getElementById(id)
+      const S = {
+        words: [],
+        loaded: false
+      }
+
       // Thème
-      const toggleTheme = document.getElementById('toggleTheme')
-      toggleTheme.addEventListener('click', () => {
+      const toggleTheme = $('toggleTheme')
+      toggleTheme?.addEventListener('click', () => {
         document.documentElement.classList.toggle('dark')
         localStorage.setItem('avril_theme_dark', document.documentElement.classList.contains('dark') ? '1' : '0')
       })
       if (localStorage.getItem('avril_theme_dark') === '1') document.documentElement.classList.add('dark')
 
-      // UI
-      const btnProposer = document.getElementById('btnProposer')
-      const btnCopier = document.getElementById('btnCopier')
-      const spanMot = document.getElementById('mot')
-      const zoneErreur = document.getElementById('zoneErreur')
-      const metaCount = document.getElementById('metaCount')
+      // Elements
+      const btnProposer = $('btnProposer')
+      const btnCopier   = $('btnCopier')
+      const spanMot     = $('mot')
+      const zoneErreur  = $('zoneErreur')
+      const metaCount   = $('metaCount')
 
-      let WORDS = []
+      // Verrouille le bouton tant que la liste n'est pas chargée
+      btnProposer.disabled = true
+      btnProposer.title = 'Chargement de mots…'
 
-      // Charge le fichier /mots.txt (une ligne = un mot). Les lignes vides ou avec # sont ignorées.
+      function showError(msg) {
+        zoneErreur.textContent = msg
+        zoneErreur.classList.remove('hidden')
+      }
+      function hideError() { zoneErreur.classList.add('hidden'); zoneErreur.textContent = '' }
+
+      // Charge le fichier /mots.txt (à la racine du dépôt)
       async function chargerMots() {
         try {
-          // no-store pour éviter un cache trop agressif sur Pages
-          const res = await fetch('mots.txt', { cache: 'no-store' })
-          if (!res.ok) throw new Error('Impossible de charger mots.txt (' + res.status + ')')
-          const txt = await res.text()
-          const arr = txt.split(/
-?
-/)
-            .map(l => l.trim())
-            .filter(l => l.length > 0 && !l.startsWith('#'))
-          // Déduplique
-          WORDS = Array.from(new Set(arr))
-          if (WORDS.length === 0) throw new Error('Le fichier mots.txt est vide (ou seulement des commentaires).')
-          metaCount.textContent = WORDS.length + ' mots'
+          const url = './mots.txt?v=' + Date.now() // bust cache
+          const res = await fetch(url, { cache: 'no-store' })
+          if (!res.ok) throw new Error('mots.txt introuvable (' + res.status + '). Placez un fichier à la racine du repo.')
+          const text = await res.text()
+          const arr = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#'))
+          const unique = Array.from(new Set(arr))
+          if (unique.length === 0) throw new Error('mots.txt est vide (ou uniquement des commentaires).')
+          S.words = unique
+          S.loaded = true
+          btnProposer.disabled = false
+          btnProposer.title = ''
+          metaCount.textContent = unique.length + ' mots'
           metaCount.classList.remove('hidden')
           hideError()
+          console.info('[Avril] mots chargés :', unique.length)
         } catch (e) {
-          showError(e.message + '
-
-Astuce : créez un fichier à la racine du repo nommé "mots.txt" avec un mot par ligne.')
+          console.error('[Avril] erreur chargement:', e)
+          btnProposer.disabled = true
+          showError(e.message + '\n\nVérifiez que le fichier s\'appelle exactement "mots.txt" et se trouve à la racine. Si votre site est publié dans /docs, placez-le aussi dans /docs.')
         }
       }
 
       function proposer() {
-        if (!WORDS.length) { showError('Aucun mot chargé. Assurez‑vous que /mots.txt existe.'); return }
-        const i = Math.floor(Math.random() * WORDS.length)
-        const mot = WORDS[i]
+        if (!S.loaded || !S.words.length) { showError('La liste n\'est pas chargée.'); return }
+        const i = Math.floor(Math.random() * S.words.length)
+        const mot = S.words[i]
         spanMot.textContent = mot
         btnCopier.disabled = false
       }
@@ -113,20 +130,13 @@ Astuce : créez un fichier à la racine du repo nommé "mots.txt" avec un mot p
         })
       }
 
-      function showError(msg) {
-        zoneErreur.textContent = msg
-        zoneErreur.classList.remove('hidden')
-      }
-      function hideError() {
-        zoneErreur.classList.add('hidden')
-        zoneErreur.textContent = ''
-      }
-
       btnProposer.addEventListener('click', proposer)
       btnCopier.addEventListener('click', copier)
 
-      // Charger la liste au démarrage
-      chargerMots()
+      // Démarrage après chargement du DOM (sécurité)
+      document.addEventListener('DOMContentLoaded', () => {
+        chargerMots()
+      })
     </script>
   </body>
 </html>
