@@ -69,8 +69,7 @@ export class PlayView {
         <div class="flex" style="justify-content:space-between; align-items:center">
           <strong>Mots (${need})</strong>
           <div class="flex">
-            <button class="btn-secondary" data-act="regen">Régénérer</button>
-            <button data-act="copy">Copier</button>
+            <button data-act="regen">Nouvelle proposition</button>
           </div>
         </div>
         <div class="copy-target" id="wordsArea">${words.join(' \u2022 ')}</div>
@@ -104,8 +103,7 @@ export class PlayView {
         <div class="flex" style="justify-content:space-between; align-items:center">
           <strong>Catégories (${need})</strong>
           <div class="flex">
-            <button class="btn-secondary" data-act="regen">Régénérer</button>
-            <button data-act="copy">Copier</button>
+            <button data-act="regen">Nouvelle proposition</button>
           </div>
         </div>
         <div class="copy-target" id="catsArea">${cats.join(' \u2022 ')}</div>
@@ -133,8 +131,7 @@ export class PlayView {
       <div class="flex" style="justify-content:space-between; align-items:center; margin-bottom:8px">
         <strong>Nombres</strong>
         <div class="flex">
-          <button class="btn-secondary" data-act="regen">Régénérer</button>
-          <button data-act="copy">Copier</button>
+          <button data-act="regen">Nouvelle proposition</button>
         </div>
       </div>
       <div class="row cols-2">

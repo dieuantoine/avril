@@ -7,17 +7,45 @@
     "params": { "wordsBatch": 3 }
   },
   {
+    "id": "nombres-aleatoires",
+    "name": "Nombres aléatoires",
+    "description": "Tire N nombres dans une plage donnée.",
+    "needs": { "numbers": true },
+    "params": { "numbers": { "min": 1, "max": 100, "batch": 3 } }
+  },
+  {
     "id": "fabrique-a-reve",
     "name": "La fabrique à rêve",
-    "description": "Faites vous deviner un mot par catégorie en ajoutant des indices à tour de rôle.",
+    "description": "Devinez un mot par catégorie en ajoutant des indices à tour de rôle.",
     "needs": { "categories": true, "words": true },
     "params": { "categoriesBatch": 4, "wordsBatch": 4 }
   },
   {
     "id": "jeu-de-la-note",
     "name": "Jeu de la note",
-    "description": "Fait deviner la note en répondant aux questions.",
+    "description": "Devinez la note en posant des questions.",
     "needs": { "numbers": true },
     "params": { "numbers": { "min": 0, "max": 10, "batch": 1 } }
+  },
+  {
+    "id": "mots-interdits",
+    "name": "Mots interdits",
+    "description": "Gagner en faisant dire son mot secret à l'adversaire ou en devinant le sien.",
+    "needs": { "words": true },
+    "params": { "wordsBatch": 1}
+  },
+  {
+    "id": "qui-suis-je",
+    "name": "Qui suis-je ?",
+    "description": "Fais deviner une personnalité, un objet ou un concept uniquement avec des questions oui/non.",
+    "needs": { "words": true },
+    "params": { "wordsBatch": 1 }
+  },
+  {
+    "id": "devine-mot",
+    "name": "Devine-Mot",
+    "description": "Fais deviner un mot en ne donnant que des indices qui rentrent dans la catégorie.",
+    "needs": { "words": true , "categories": true },
+    "params": { "wordsBatch": 1, "categoriesBatch": 1 }
   }
 ]
