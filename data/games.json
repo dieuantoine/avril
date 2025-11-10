@@ -1,0 +1,23 @@
+[
+  {
+    "id": "mots-aleatoires",
+    "name": "Mots aléatoires",
+    "description": "Tire N mots.",
+    "needs": { "words": true },
+    "params": { "wordsBatch": 3 }
+  },
+  {
+    "id": "fabrique-a-reve",
+    "name": "La fabrique à rêve",
+    "description": "Faites vous deviner un mot par catégorie en ajoutant des indices à tour de rôle.",
+    "needs": { "categories": true, "words": true },
+    "params": { "categoriesBatch": 4, "wordsBatch": 4 }
+  },
+  {
+    "id": "jeu-de-la-note",
+    "name": "Jeu de la note",
+    "description": "Fait deviner la note en répondant aux questions.",
+    "needs": { "numbers": true },
+    "params": { "numbers": { "min": 0, "max": 10, "batch": 1 } }
+  }
+]
