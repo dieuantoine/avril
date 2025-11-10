@@ -260,8 +260,13 @@ hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
   font-weight: 700;
   border-radius: 999px;
   padding: 10px 14px;
+  color: var(--brand);
 }
 .nav__link.active {
   background: color-mix(in oklab, var(--accent-weak) 70%, white 30%);
   box-shadow: 0 1px 0 0 var(--line) inset;
+}
+
+.nav__link.visied {
+  color: var(--brand);
 }
