@@ -266,7 +266,6 @@ hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
   background: color-mix(in oklab, var(--accent-weak) 70%, white 30%);
   box-shadow: 0 1px 0 0 var(--line) inset;
 }
-
-.nav__link.visied {
+.nav__link.visited {
   color: var(--brand);
 }
