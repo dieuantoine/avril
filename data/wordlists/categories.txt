@@ -4,5 +4,4 @@ Personne
 Aliment
 Expression
 Mot de 4 lettres
-Mot commençant par un A
-Mot commençant par un B
+Mot commençant par une lettre
