@@ -20,5 +20,26 @@
   <footer class="site-footer">Avril — Mini-jeux</footer>
 
   <script type="module" src="./js/app.js"></script>
+<button id="themeToggle" class="theme-toggle">
+  <span class="theme-toggle__dot"></span> Thème
+</button>
+<script>
+  const root = document.documentElement;
+  const KEY = 'AVRIL_THEME';
+  const saved = localStorage.getItem(KEY); // 'light' | 'dark' | null
+  if (saved === 'dark') root.setAttribute('data-theme','spring-dark');
+
+  document.getElementById('themeToggle')?.addEventListener('click', () => {
+    const dark = root.getAttribute('data-theme') === 'spring-dark';
+    if (dark) {
+      root.removeAttribute('data-theme');
+      localStorage.setItem(KEY, 'light');
+    } else {
+      root.setAttribute('data-theme','spring-dark');
+      localStorage.setItem(KEY, 'dark');
+    }
+  });
+</script>
+
 </body>
 </html>
