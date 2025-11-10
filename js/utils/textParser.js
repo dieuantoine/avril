@@ -1,13 +1,12 @@
-export async function parseTextFiles(fileList) {
-const files = Array.from(fileList || []);
-const all = [];
-for (const f of files) {
-const text = await f.text();
-const lines = text
-.split(/\r?\n/)
-.map(s => s.trim())
-.filter(s => s.length > 0);
-all.push(...lines);
+export function parseTextToLines(text) {
+  return text
+    .split(/\r?\n/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
 }
-return Array.from(new Set(all));
+
+export function mergeUnique(arraysOfStrings) {
+  const set = new Set();
+  arraysOfStrings.forEach(arr => arr.forEach(s => set.add(s)));
+  return Array.from(set);
 }
